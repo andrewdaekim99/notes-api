@@ -2,7 +2,7 @@ from sqlmodel import Field, SQLModel, create_engine, Session, select
 
 # create table Note with 3 columns id(optional but primary key), title, and content
 class Note(SQLModel, table=True):
-    id: int | None = Field(default=None, primary=True)
+    id: int | None = Field(default=None, primary_key=True)
     title: str
     content: str
 
