@@ -6,7 +6,7 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True)
     password_hash: str
-    notes: List["None"] = Relationship(back_populates="ownder")
+    notes: List["Note"] = Relationship(back_populates="owner")
 
 # create table Note with 5 columns id(optional but primary key), title, content, owner_id, and owner
 class Note(SQLModel, table=True):
