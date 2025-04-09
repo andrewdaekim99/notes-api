@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from app.models import Note, create_db_and_tables, engine, User
-from app.crud import create_note, get_notes, get_note, update_note, delete_note
+from app.crud import create_note, get_notes_for_user, get_note_by_id_for_user, update_note, delete_note
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from app.auth import hash_password, verify_password, create_access_token, decode_access_token
 from sqlmodel import select, Session
@@ -53,34 +53,35 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 # accepts a new note (validated by FastAPI), then creates and returns the saved note
 @app.post("/notes/", response_model=Note)
-def add_note(note: Note):
+def add_note(note: Note, user: User = Depends(get_current_user)):
+    note.owner_id = user.id
     return create_note(note)
 
 # returns all notes
 @app.get("/notes/", response_model=list[Note])
-def read_notes():
-    return get_notes()
+def read_notes(user: User = Depends(get_current_user)):
+    return get_notes_for_user(user.id)
 
 # returns a specific note by id if found, otherwise otherwise returns a 404 error
 @app.get("/notes/{note_id}", response_model=Note)
-def read_note(note_id: int):
-    note = get_note(note_id)
-    if note is None:
+def read_note(note_id: int, user: User = Depends(get_current_user)):
+    note = get_note_by_id_for_user(note_id)
+    if not Note or note.owner_id != user.id:
         raise HTTPException(status_code=404, detail="Note not found")
     return note
 
 # updates an existing note using key-value pairs
 @app.put("/notes/{note_id}", response_model=Note)
-def edit_note(note_id: int, data:dict):
-    updated = update_note(note_id, data)
-    if updated is None:
-        raise HTTPException(status_code=404, detail="Note not found")
+def edit_note(note_id: int, data:dict, user: User = Depends(get_current_user)):
+    updated = update_note(note_id, data, user.id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Note not found or not yours")
     return updated
 
 # deletes a note found by id and returns a confirmation
 @app.delete("/notes/{note_id}")
-def remove_note(note_id: int):
-    deleted = delete_note(note_id)
+def remove_note(note_id: int, user: User = Depends(get_current_user)):
+    deleted = delete_note(note_id, user.id)
     if not deleted:
             raise HTTPException(status_code=404, detail="Note not found")
     return {"deleted": True}
