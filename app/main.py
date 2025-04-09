@@ -17,6 +17,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# this function is used to protect endpoints by reading the token, decoding to get username, loads only that user, and returns the user object for the route
+def get_current_user(token: str = Depends(oauth2_scheme)):
+     username = decode_access_token(token)
+     if not username:
+        raise HTTPException(status_code=401, detail="Invalid token")
+     with Session(engine) as session:
+          user = session.exec(select(User).where(User.username == username)).first()
+          if not user:
+               raise HTTPException(status_code=401, details="User not found")
+          return user
+
 # accepts new unique usernames and passwords to create new users and add them to the database
 @app.post("/signup")
 def signup(form_data: OAuth2PasswordRequestForm = Depends()):
